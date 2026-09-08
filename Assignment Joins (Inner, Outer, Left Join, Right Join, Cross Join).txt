@@ -1,0 +1,196 @@
+CREATE DATABASE IF NOT EXISTS ITSQL10_JDTF11Dataset;
+
+USE ITSQL10_JDTF11Dataset;
+CREATE TABLE Customers (
+    CustomerID INT,
+    CustomerName VARCHAR(50),
+    City VARCHAR(30),
+    JoinDate DATE
+);
+
+INSERT INTO Customers (CustomerID, CustomerName, City, JoinDate) VALUES
+(101, 'Rahul Sharma', 'Bangalore', '2023-01-15'),
+(102, 'Priya Mehta', 'Mumbai', '2024-03-20'),
+(103, 'Arjun Nair', 'Chennai', '2025-01-12'),
+(104, 'Sneha Gupta', 'Delhi', '2022-07-10'),
+(105, 'Kavya Reddy', 'Hyderabad', '2024-08-15'),
+(106, 'Amit Verma', 'Pune', '2023-11-05'),
+(107, 'Rohan Singh', 'Kolkata', '2024-05-18'),
+(108, 'Simran Kaur', 'Delhi', '2025-02-01'),
+(109, 'Anjali Jain', 'Mumbai', '2023-09-22'),
+(110, 'Vikram Patel', 'Ahmedabad', '2022-12-30');
+CREATE TABLE Orders (
+    OrderID INT,
+    CustomerID INT,
+    OrderDate DATE,
+    OrderAmount DECIMAL(10,2),
+    Status VARCHAR(20)
+);
+
+INSERT INTO Orders (OrderID, CustomerID, OrderDate, OrderAmount, Status) VALUES
+(5001, 101, '2025-01-05', 12000, 'Delivered'),
+(5002, 102, '2025-01-15', 8500, 'Pending'),
+(5003, 101, '2025-02-10', 22000, 'Delivered'),
+(5004, 104, '2025-02-15', 4500, 'Cancelled'),
+(5005, 103, '2025-03-01', 17500, 'Delivered'),
+(5006, 105, '2025-03-10', 9800, 'Pending'),
+(5007, 106, '2025-03-18', 25000, 'Delivered'),
+(5008, 107, '2025-04-02', 14500, 'Delivered'),
+(5009, 101, '2025-04-10', 30000, 'Delivered'),
+(5010, 109, '2025-04-15', 6500, 'Pending'),
+(5011, 110, '2025-05-01', 42000, 'Delivered'),
+(5012, 104, '2025-05-08', 18000, 'Delivered'),
+(5013, 106, '2025-05-15', 7000, 'Cancelled'),
+(5014, 102, '2025-05-20', 27000, 'Delivered'),
+(5015, 107, '2025-06-01', 15500, 'Pending');
+CREATE TABLE Employees (
+    EmployeeID INT,
+    EmployeeName VARCHAR(50),
+    ManagerID INT,
+    Department VARCHAR(30),
+    JoiningDate DATE,
+    Salary DECIMAL(10,2)
+);
+
+INSERT INTO Employees
+(EmployeeID, EmployeeName, ManagerID, Department, JoiningDate, Salary) VALUES
+(1, 'Rajesh Kumar', NULL, 'Management', '2018-01-10', 150000),
+(2, 'Neha Sharma', 1, 'Sales', '2020-03-15', 90000),
+(3, 'Amit Gupta', 1, 'IT', '2019-06-20', 110000),
+(4, 'Priyanka Singh', 2, 'Sales', '2022-01-12', 65000),
+(5, 'Vikas Patel', 2, 'Sales', '2021-09-18', 70000),
+(6, 'Rohit Jain', 3, 'IT', '2023-02-05', 60000),
+(7, 'Anjali Verma', 3, 'IT', '2022-11-10', 62000),
+(8, 'Karan Mehta', 1, 'HR', '2021-05-25', 80000),
+(9, 'Sneha Kapoor', 8, 'HR', '2024-01-05', 50000),
+(10, 'Arjun Malhotra', 3, 'IT', '2024-04-15', 55000);
+
+-- Q1. Top 5 highest-value orders with customer names
+
+SELECT c.CustomerName,
+       o.OrderID,
+       o.OrderAmount,
+       o.Status
+FROM Orders o
+JOIN Customers c ON c.CustomerID = o.CustomerID
+ORDER BY o.OrderAmount DESC
+LIMIT 5;
+-- Q2. Customers whose names start with A, R, or S
+
+SELECT CustomerID,
+       CustomerName,
+       City,
+       JoinDate
+FROM Customers
+WHERE CustomerName REGEXP '^[ARS]';
+-- Q3. Orders greater than ₹10,000 with Pending status
+
+SELECT c.CustomerName,
+       o.OrderID,
+       o.OrderAmount,
+       o.Status
+FROM Orders o
+JOIN Customers c ON c.CustomerID = o.CustomerID
+WHERE o.OrderAmount > 10000
+  AND o.Status = 'Pending';
+-- Q4. Customers associated for more than 365 days
+
+SELECT CustomerID,
+       CustomerName,
+       JoinDate,
+       DATEDIFF(CURDATE(), JoinDate) AS Days_Associated
+FROM Customers
+WHERE DATEDIFF(CURDATE(), JoinDate) > 365
+ORDER BY Days_Associated DESC;
+-- Q5. GST and Expected Collection Date
+
+SELECT OrderID,
+       OrderAmount AS Current_Amount,
+       ROUND(OrderAmount * 0.18, 2) AS GST_18_Percent,
+       ROUND(OrderAmount * 1.18, 2) AS Total_Amount_After_GST,
+       DATE_ADD(OrderDate, INTERVAL 15 DAY) AS Expected_Collection_Date
+FROM Orders
+ORDER BY OrderID;
+-- Q6. Orders ranked 11th to 20th
+
+SELECT o.OrderID,
+       c.CustomerName,
+       o.OrderAmount,
+       o.Status
+FROM Orders o
+JOIN Customers c
+    ON c.CustomerID = o.CustomerID
+ORDER BY o.OrderAmount DESC
+LIMIT 10 OFFSET 10;
+-- Q7. Customers who never placed an order
+
+SELECT c.CustomerID,
+       c.CustomerName,
+       c.JoinDate,
+       DATEDIFF(CURDATE(), c.JoinDate) AS Days_Since_Registration
+FROM Customers c
+LEFT JOIN Orders o
+    ON c.CustomerID = o.CustomerID
+WHERE o.CustomerID IS NULL
+ORDER BY c.CustomerID;
+-- Q8. Employee hierarchy using JOIN
+
+SELECT 
+    e.EmployeeName AS Employee_Name,
+    COALESCE(m.EmployeeName, 'No Manager') AS Manager_Name,
+    e.Department
+FROM Employees e
+LEFT JOIN Employees m
+    ON e.ManagerID = m.EmployeeID
+ORDER BY e.EmployeeID;
+-- Q9. Customers whose first order was within 30 days of joining
+
+SELECT 
+    c.CustomerName,
+    c.JoinDate,
+    MIN(o.OrderDate) AS First_Order_Date,
+    DATEDIFF(MIN(o.OrderDate), c.JoinDate) AS Days_Taken_To_Place_First_Order
+FROM Customers c
+JOIN Orders o
+    ON c.CustomerID = o.CustomerID
+GROUP BY c.CustomerID, c.CustomerName, c.JoinDate
+HAVING DATEDIFF(MIN(o.OrderDate), c.JoinDate) BETWEEN 0 AND 30
+ORDER BY c.CustomerID;
+-- Q10. Customer Purchase and Loyalty Report
+
+SELECT c.CustomerName,
+       COALESCE(SUM(o.OrderAmount), 0) AS Total_Purchase_Amount,
+       CASE
+           WHEN COALESCE(SUM(o.OrderAmount), 0) > 50000 THEN 'Premium'
+           WHEN COALESCE(SUM(o.OrderAmount), 0) BETWEEN 20000 AND 50000 THEN 'Gold'
+           ELSE 'Silver'
+       END AS Spending_Category,
+       CASE
+           WHEN c.JoinDate < '2024-01-01' THEN 'Loyal Customer'
+           ELSE 'New Customer'
+       END AS Loyalty_Status
+FROM Customers c
+LEFT JOIN Orders o
+    ON o.CustomerID = c.CustomerID
+GROUP BY c.CustomerID, c.CustomerName, c.JoinDate
+ORDER BY Total_Purchase_Amount DESC;
+-- Q11. Orders higher than average order amount
+
+SELECT c.CustomerName,
+       o.OrderID,
+       o.OrderAmount
+FROM Orders o
+JOIN Customers c
+    ON c.CustomerID = o.CustomerID
+WHERE o.OrderAmount > (SELECT AVG(OrderAmount) FROM Orders)
+ORDER BY o.OrderAmount DESC;
+-- Q12. 2nd to 6th highest orders
+
+SELECT c.CustomerName,
+       o.OrderID,
+       o.OrderAmount
+FROM Orders o
+JOIN Customers c
+    ON c.CustomerID = o.CustomerID
+ORDER BY o.OrderAmount DESC
+LIMIT 5 OFFSET 1;
